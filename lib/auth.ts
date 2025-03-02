@@ -21,12 +21,11 @@ export function generateToken(userId: string) {
 
 export function setAuthCookie(token: string) {
   const cookieStore = cookies()
-  const isDev = process.env.NODE_ENV !== "production"
   
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: !isDev,
-    sameSite: "lax",
+    secure: true,
+    sameSite: "strict",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   })
