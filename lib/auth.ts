@@ -4,7 +4,8 @@ import { cookies } from "next/headers"
 import { getDb } from "./db"
 import { ObjectId } from "mongodb"
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || "your-secret-key"
+const COOKIE_NAME = "auth-token"
 
 export async function hashPassword(password: string) {
   return hash(password, 12)
@@ -19,21 +20,27 @@ export function generateToken(userId: string) {
 }
 
 export function setAuthCookie(token: string) {
-  cookies().set("auth-token", token, {
+  const cookieStore = cookies()
+  const isDev = process.env.NODE_ENV !== "production"
+  
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7, // 1 week
+    secure: !isDev,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   })
 }
 
 export function removeAuthCookie() {
-  cookies().delete("auth-token")
+  const cookieStore = cookies()
+  cookieStore.delete(COOKIE_NAME)
 }
 
 export async function getUserFromToken() {
   try {
-    const token = cookies().get("auth-token")?.value
+    const cookieStore = cookies()
+    const token = cookieStore.get(COOKIE_NAME)?.value
 
     if (!token) {
       return null
@@ -41,9 +48,13 @@ export async function getUserFromToken() {
 
     const decoded = verify(token, JWT_SECRET) as { userId: string }
     const db = await getDb()
-    const user = await db.collection("users").findOne({ _id: new ObjectId(decoded.userId) })
+    
+    const user = await db.collection("users").findOne({
+      _id: new ObjectId(decoded.userId)
+    })
 
     if (!user) {
+      removeAuthCookie()
       return null
     }
 
@@ -53,7 +64,7 @@ export async function getUserFromToken() {
       email: user.email,
     }
   } catch (error) {
+    removeAuthCookie()
     return null
   }
 }
-
