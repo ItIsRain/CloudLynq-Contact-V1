@@ -21,6 +21,12 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  hostname: '0.0.0.0',
+  port: 3000,
+  server: {
+    host: '0.0.0.0',
+    port: 3000
+  }
 }
 
 mergeConfig(nextConfig, userConfig)
